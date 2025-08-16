@@ -18,27 +18,34 @@ const CONNECTION_STRING =
 mongoose.connect(CONNECTION_STRING);
 
 const app = express();
+
+// CORS configuration
 app.use(
   cors({
     credentials: true,
     origin: process.env.NETLIFY_URL || "http://localhost:5173",
-    
   })
 );
 
+// Session configuration with environment-specific settings
 const sessionOptions = {
   secret: process.env.SESSION_SECRET || "simplereads",
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production", // true for HTTPS, false for HTTP
+  }
 };
 
-if (process.env.NODE_ENV !== "development") {
+// Add proxy setting for production environments
+if (process.env.NODE_ENV === "production") {
   sessionOptions.proxy = true;
-  sessionOptions.cookie = {
-    sameSite: "none",
-    secure: true,
-    domain: process.env.NODE_SERVER_DOMAIN,
-  };
+  if (process.env.NODE_SERVER_DOMAIN) {
+    sessionOptions.cookie.domain = process.env.NODE_SERVER_DOMAIN;
+  }
 }
 
 app.use(session(sessionOptions));
