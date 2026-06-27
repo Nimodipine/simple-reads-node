@@ -3,7 +3,9 @@ import * as dao from "./dao.js";
 import * as reviewDao from "../Reviews/dao.js";
 import * as favoriteDao from "../Favorites/dao.js";
 import * as bookDao from "./dao.js";
+
 const GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1";
+const GOOGLE_BOOKS_API_KEY = process.env.GOOGLE_BOOKS_API_KEY;
 
 /**
  * Search for books using Google Books API
@@ -21,6 +23,7 @@ export const searchBooks = async (query, maxResults = 10) => {
         maxResults: Math.min(maxResults, 40), // Google Books API max is 40
         orderBy: "relevance",
         printType: "books",
+        key: GOOGLE_BOOKS_API_KEY,
       },
     });
 
@@ -90,7 +93,8 @@ export const getBookByGoogleId = async (googleId) => {
     );
 
     const response = await axios.get(
-      `${GOOGLE_BOOKS_API_URL}/volumes/${googleId}`
+      `${GOOGLE_BOOKS_API_URL}/volumes/${googleId}`,
+      { params: { key: GOOGLE_BOOKS_API_KEY } }
     );
 
     const item = response.data;
@@ -161,11 +165,13 @@ export const searchBooksByAuthor = async (author, maxResults = 10) => {
 export const searchBooksByCategory = async (category, maxResults = 10) => {
   return searchBooks(`subject:"${category}"`, maxResults);
 };
+
 export const getTopBooksByEngagement = async () => {
   // Aggregate review and favorite counts for each book
-  // Get all review counts
   const reviewCounts = await reviewDao.findAllReviews();
-  const favoriteCounts = await favoriteDao.findAllFavorites ? await favoriteDao.findAllFavorites() : [];
+  const favoriteCounts = await favoriteDao.findAllFavorites
+    ? await favoriteDao.findAllFavorites()
+    : [];
 
   // Count reviews per book
   const reviewMap = {};
@@ -199,7 +205,8 @@ export const getTopBooksByEngagement = async () => {
     "J_Q5EAAAQBAJ",
     "CpKFDAAAQBAJ",
     "2gOsAgAAQBAJ",
-    "86cDEAAAQBAJ",];
+    "86cDEAAAQBAJ",
+  ];
 
   // Get top books
   let topBooks = [];
@@ -212,7 +219,7 @@ export const getTopBooksByEngagement = async () => {
   // Fill with fallback books if needed
   for (const fallbackId of fallbackIds) {
     if (topBooks.length >= 5) break;
-    if (!topBooks.find(b => b.googleId === fallbackId)) {
+    if (!topBooks.find((b) => b.googleId === fallbackId)) {
       const book = await bookDao.findBookByGoogleId(fallbackId);
       if (book) topBooks.push(book);
     }
